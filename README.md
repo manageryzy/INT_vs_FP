@@ -135,5 +135,10 @@ CUDA_VISIBLE_DEVICES=0 python3 cal_qsnr.py \
 
 # Citation
 ```
-TODO
+@article{int_vs_fp_2025,
+  title={INT v.s. FP: A Comprehensive Study of Fine-Grained Low-bit Quantization Formats},
+  author={Chen, Mengzhao and Wu, Meng and Jin, Hui and Yuan, Zhihang and Liu, Jing and Zhang, Chaoyi and Li, Yunshui and Huang, Jie and Ma, Jin and Xue, Zeyue and Liu, Zhiheng and Bin, Xingyan and Luo, Ping},
+  journal={arXiv preprint arXiv:2510.25602},
+  year={2025}
+}
 ```
