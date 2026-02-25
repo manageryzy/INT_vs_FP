@@ -53,7 +53,7 @@ def evaluate_ppl_and_kl(model_path, quant_args, tokenizer, seqlen=4096, dataset=
     1. Load the FP model, compute and cache top-k logits to the CPU.
     2. Load Quant model and calculate PPL and KL divergence in one go.
     """
-    device = 'cuda'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # --- 数据集加载 ---
     if dataset == 'wikitext2':
@@ -77,12 +77,15 @@ def evaluate_ppl_and_kl(model_path, quant_args, tokenizer, seqlen=4096, dataset=
     with init_empty_weights():
         fp_model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     block_class_name = fp_model.model.layers[0].__class__.__name__
-    device_map = infer_auto_device_map(
-        fp_model,
-        max_memory={i: args.max_memory for i in range(torch.cuda.device_count())},
-        no_split_module_classes=[block_class_name],
-        verbose=False
-    )
+    if torch.cuda.is_available():
+        device_map = infer_auto_device_map(
+            fp_model,
+            max_memory={i: args.max_memory for i in range(torch.cuda.device_count())},
+            no_split_module_classes=[block_class_name],
+            verbose=False
+        )
+    else:
+        device_map = 'cpu'
     fp_model = AutoModelForCausalLM.from_pretrained(
         model_path, trust_remote_code=True, device_map=device_map, dtype=torch.bfloat16
     )
@@ -104,7 +107,8 @@ def evaluate_ppl_and_kl(model_path, quant_args, tokenizer, seqlen=4096, dataset=
         
         cached_fp_logits.append((fp_topk_logits.to('cpu'), topk_ids.to('cpu')))
     
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     print("--- Stage 1 Complete: FP model unloaded. ---")
 
     # =================================================================
@@ -139,7 +143,8 @@ def evaluate_ppl_and_kl(model_path, quant_args, tokenizer, seqlen=4096, dataset=
         kls.append(kl_div.item()*1e6)
 
     del quant_model
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     total_nll = sum(nlls)
     loss = total_nll / (nsamples * seqlen)

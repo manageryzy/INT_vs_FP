@@ -150,7 +150,8 @@ args = parse_args()
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_path,trust_remote_code=True,add_bos_token=False)
 config = AutoConfig.from_pretrained(args.model_path,trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(args.model_path,trust_remote_code=True,device_map='auto',dtype=torch.bfloat16)
+_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+model = AutoModelForCausalLM.from_pretrained(args.model_path,trust_remote_code=True,device_map='auto' if torch.cuda.is_available() else 'cpu',dtype=_dtype)
 
 input_activation = {}
 output_activation = {} # not used now

@@ -109,9 +109,11 @@ class QuantLinear(nn.Module):
         config,
         bias=False,
         dtype=torch.float32,
-        device='cuda'
+        device=None
     ):
         super(QuantLinear, self).__init__()
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.in_features = in_features
         self.out_features = out_features
         self.weight = nn.Parameter(torch.Tensor(out_features, in_features).to(dtype=dtype, device=device))

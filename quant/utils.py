@@ -29,5 +29,6 @@ def wrap_to_quant_model(model, quant_param):
             set_op_by_name(model, name, quantlinear)  
             del module.weight
             del module  
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
