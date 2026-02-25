@@ -111,16 +111,25 @@ def _mf_params(n=1, G=16):
 def qsnr_mf_int(kappa, b, n=1, G=16, rho=1.5):
     """MF-INT: outliers stored losslessly, rest quantized with INT-b.
 
-    Quantizer scale is set by z_n (truncated peak), but QSNR is normalized
-    to total signal power σ²=1. Correction: -10·log10(p_keep · σ_kept²).
+    Quantizer range adapts: min(κ, z_n). When κ < z_n, behaves like MX
+    (no real outliers). When κ > z_n, quantizer tightens to z_n.
+    QSNR normalized to total signal power σ²=1.
     """
+    kappa = np.asarray(kappa, dtype=np.float64)
     z_n, p_keep, sigma_kept_sq = _mf_params(n, G)
-    return qsnr_int(z_n, b, rho) - 10.0 * np.log10(p_keep * sigma_kept_sq)
+    kappa_eff = np.minimum(kappa, z_n)
+    base = qsnr_int(kappa_eff, b, rho)
+    correction = -10.0 * np.log10(p_keep * sigma_kept_sq)
+    return base + correction
 
 def qsnr_mf_fp(kappa, M, B, Qmax, n=1, G=16, rho=1.5):
     """MF-FP: outliers stored losslessly, rest quantized with FP."""
+    kappa = np.asarray(kappa, dtype=np.float64)
     z_n, p_keep, sigma_kept_sq = _mf_params(n, G)
-    return qsnr_fp(z_n, M, B, Qmax, rho) - 10.0 * np.log10(p_keep * sigma_kept_sq)
+    kappa_eff = np.minimum(kappa, z_n)
+    base = qsnr_fp(kappa_eff, M, B, Qmax, rho)
+    correction = -10.0 * np.log10(p_keep * sigma_kept_sq)
+    return base + correction
 
 # ----------------------------
 # QSNR models (SD: Sigma-Delta inspired)
@@ -271,9 +280,9 @@ pairs_by_group = {}  # (bits(str), scale) -> {"INT": (label, y), "FP": (label, y
 
 for name, kind, bits, params, rho, scale in formats:
     if kind == "MF-INT":
-        y = np.full_like(kappa, qsnr_mf_int(None, b=params["b"], n=params["n"], G=params["G"], rho=rho))
+        y = qsnr_mf_int(kappa, b=params["b"], n=params["n"], G=params["G"], rho=rho)
     elif kind == "MF-FP":
-        y = np.full_like(kappa, qsnr_mf_fp(None, M=params["M"], B=params["B"], Qmax=params["Qmax"], n=params["n"], G=params["G"], rho=rho))
+        y = qsnr_mf_fp(kappa, M=params["M"], B=params["B"], Qmax=params["Qmax"], n=params["n"], G=params["G"], rho=rho)
     elif kind == "SD":
         y = qsnr_sd(kappa, b=params["b"], L=params["L"])
     elif kind == "MFSD":
